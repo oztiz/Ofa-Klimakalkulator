@@ -1,0 +1,10 @@
+(function(root){
+"use strict";
+const factors=Object.freeze({version:"guide-2.3-partial-v1",dieselDirect:2.39,dieselUpstream:0.76,electricity:0.0345,n:4.79,p:1.34,k:1.44,source:"https://www.klimasmartlandbruk.no/getfile.php/134803-1776167164/Dokumenter/2.3%20Brukerveileder.pdf"});
+function amount(v){if(v===null||v===undefined||v==="")return null;const n=Number(v);if(!Number.isFinite(n)||n<0)throw Error("Mengder må være endelige, positive tall eller null.");return n;}
+function calculate(d){const year=Number(d.year);if(!Number.isInteger(year)||year<1900||year>2200)throw Error("Ugyldig år.");
+const rows=[],missing=[];for(const [key,label,factor] of [["diesel","Diesel",factors.dieselDirect+factors.dieselUpstream],["electricity","Strøm",factors.electricity],["n","Produksjon av nitrogen i mineralgjødsel",factors.n],["p","Produksjon av fosfor i mineralgjødsel",factors.p],["k","Produksjon av kalium i mineralgjødsel",factors.k]]){const v=amount(d[key]);if(v===null){missing.push(label);continue;}if(d.inputYear[key]!==year)throw Error(label+": mengden gjelder et annet år.");if(!["measured","user_reported","estimated"].includes(d.evidence[key]))throw Error(label+": velg datagrunnlag.");if(!String(d.sources[key]||"").trim())throw Error(label+": oppgi kilde.");rows.push({key,label,value:v,factor,kgCO2e:v*factor,evidence:d.evidence[key],source:d.sources[key]});}
+const area=amount(d.area),harvest=amount(d.harvest);const total=rows.reduce((s,r)=>s+r.kgCO2e,0);
+return {version:"0.01",factorVersion:factors.version,year,scope:"Delregnskap: energi og produksjon av mineralgjødsel",rows,subtotal:rows.length?total:null,perDaa:rows.length&&area>0?total/area:null,perKg:rows.length&&harvest>0?total/harvest:null,missing,excluded:["Lystgass fra jord og gjødsling","Karbonendring og organisk jord","Kalking","Plantevern og såkorn","Innleid arbeid utenfor registrert drivstoff","Maskiner og reparasjoner","Transport etter gårdsgrinda"],containsEstimate:rows.some(r=>r.evidence==="estimated")};}
+root.OFAKlima={calculate,factors};if(typeof module!=="undefined")module.exports=root.OFAKlima;
+})(globalThis);
